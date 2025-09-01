@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOMBANG CCTV Stream Viewer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        #player {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background: black;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.4em;
+            text-align: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .logo {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 0.9em;
+            text-align: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">CCTV JOMBANG</div>
+    <video id="player" autoplay muted playsinline></video>
+    <div id="message">Memuat stream CCTV...</div>
+    <div class="instructions">Klik untuk keluar dari fullscreen</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const player = document.getElementById('player');
+            const message = document.getElementById('message');
+            
+            // Fungsi untuk mendapatkan parameter URL
+            function getStreamUrl() {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    return decodeURIComponent(hash);
+                }
+                
+                // Jika tidak ada hash, coba gunakan parameter query
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('stream') || urlParams.get('url') || urlParams.get('src');
+            }
+            
+            // Fungsi untuk memutar stream
+            function playStream(streamUrl) {
+                if (!streamUrl) {
+                    message.textContent = 'URL stream tidak ditemukan. Silakan tambahkan URL stream setelah # dalam URL.';
+                    return;
+                }
+                
+                message.textContent = 'Sedang memuat stream...';
+                
+                // Coba gunakan Media Source Extensions untuk stream MJPEG
+                if (streamUrl.includes('/nph-zms')) {
+                    // Untuk ZoneMinder MJPEG streams
+                    player.src = streamUrl;
+                } else {
+                    // Untuk stream lainnya
+                    player.src = streamUrl;
+                }
+                
+                player.style.display = 'block';
+                
+                player.onloadeddata = function() {
+                    message.style.display = 'none';
+                    enterFullscreen();
+                };
+                
+                player.onerror = function() {
+                    message.textContent = 'Gagal memuat stream. Mungkin stream tidak tersedia atau format tidak didukung.';
+                    player.style.display = 'none';
+                };
+            }
+            
+            // Fungsi untuk masuk ke mode fullscreen
+            function enterFullscreen() {
+                try {
+                    if (player.requestFullscreen) {
+                        player.requestFullscreen();
+                    } else if (player.webkitRequestFullscreen) {
+                        player.webkitRequestFullscreen();
+                    } else if (player.msRequestFullscreen) {
+                        player.msRequestFullscreen();
+                    }
+                } catch (e) {
+                    console.log('Error entering fullscreen:', e);
+                }
+            }
+            
+            // Fungsi untuk keluar dari mode fullscreen
+            function exitFullscreen() {
+                try {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                } catch (e) {
+                    console.log('Error exiting fullscreen:', e);
+                }
+            }
+            
+            // Event listener untuk klik pada video
+            player.addEventListener('click', function() {
+                if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                    exitFullscreen();
+                } else {
+                    enterFullscreen();
+                }
+            });
+            
+            // Tangani perubahan fullscreen state
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('msfullscreenchange', handleFullscreenChange);
+            
+            function handleFullscreenChange() {
+                const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+                document.querySelector('.instructions').style.display = isFullscreen ? 'block' : 'none';
+            }
+            
+            // Coba autoplay dengan sound muted
+            player.muted = true;
+            
+            // Mulai memutar stream
+            const streamUrl = getStreamUrl();
+            playStream(streamUrl);
+            
+            // Fallback: Jika setelah 5 detik video belum dimuat, coba lagi
+            setTimeout(function() {
+                if (player.readyState < 2) { // HAVE_CURRENT_DATA
+                    player.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+                    player.load();
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
