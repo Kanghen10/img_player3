@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>JOMBANG CCTV Stream Viewer</title>
+  <title>CCTV Stream Fullscreen</title>
   <style>
     html, body {
       margin: 0;
@@ -11,7 +11,6 @@
       background: black;
       height: 100%;
       overflow: hidden;
-      font-family: Arial, sans-serif;
     }
 
     #player {
@@ -31,134 +30,46 @@
       font-size: 1.4em;
       text-align: center;
       z-index: 10;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 80%;
-    }
-
-    .watermark {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 14px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px 10px;
-      border-radius: 5px;
-      z-index: 5;
-    }
-
-    .status {
-      position: absolute;
-      bottom: 15px;
-      right: 15px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 12px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px 10px;
-      border-radius: 5px;
-      z-index: 5;
-    }
-
-    .loading-dots:after {
-      content: '';
-      animation: dots 1.5s infinite;
-    }
-
-    @keyframes dots {
-      0%, 20% { content: '.'; }
-      40% { content: '..'; }
-      60%, 100% { content: '...'; }
     }
   </style>
 </head>
 <body>
-  <div class="watermark">CCTV JOMBANG - Monitor 66</div>
-  <div id="message">Memuat stream CCTV<span class="loading-dots"></span></div>
-  <video id="player" autoplay muted playsinline></video>
-  <div class="status" id="status">Menghubungkan<span class="loading-dots"></span></div>
+  <div id="message">Memuat stream CCTV...</div>
+  <img id="player" alt="CCTV Stream" />
 
   <script>
-    // Fungsi utama untuk memuat stream
-    function loadStream() {
-      const hash = window.location.hash.substring(1);
-      const streamUrl = decodeURIComponent(hash);
-      const video = document.getElementById("player");
-      const msg = document.getElementById("message");
-      const status = document.getElementById("status");
+    const hash = window.location.hash.substring(1);
+    const streamUrl = decodeURIComponent(hash);
+    const img = document.getElementById("player");
+    const msg = document.getElementById("message");
 
-      function enterFullscreen() {
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) elem.requestFullscreen();
-        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-        else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-      }
-
-      // Validasi URL
-      if (!streamUrl || !streamUrl.startsWith("http")) {
-        msg.innerHTML = "URL stream tidak valid.<br>Gunakan format:<br><code>#https://link-stream-cctv</code>";
-        status.textContent = "Error: URL tidak valid";
-        return;
-      }
-
-      // Event handler untuk error loading
-      video.onerror = () => {
-        msg.innerHTML = "Gagal memuat stream CCTV.<br>Pastikan link valid dan CCTV online.";
-        msg.style.display = "block";
-        video.style.display = "none";
-        status.textContent = "Error: Gagal memuat stream";
-        
-        // Coba lagi setelah 5 detik
-        setTimeout(() => {
-          video.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + 'retry=' + Date.now();
-          video.load();
-        }, 5000);
-      };
-
-      // Event handler untuk success loading
-      video.onloadeddata = () => {
-        msg.style.display = "none";
-        video.style.display = "block";
-        status.textContent = "Terhubung: " + new Date().toLocaleTimeString();
-        
-        // Coba play video
-        video.play().catch(e => {
-          console.log("Autoplay prevented:", e);
-          video.muted = true;
-          video.play();
-        });
-      };
-
-      // Event ketika video mulai diputar
-      video.onplay = () => {
-        status.textContent = "Streaming: " + new Date().toLocaleTimeString();
-      };
-
-      // Event ketika video dijeda
-      video.onpause = () => {
-        status.textContent = "Dijeda: " + new Date().toLocaleTimeString();
-      };
-
-      // Set sumber video
-      video.src = streamUrl;
-      video.muted = true; // Mute untuk menghindari masalah autoplay
-
-      // Masuk ke mode fullscreen setelah halaman dimuat
-      window.addEventListener("load", () => {
-        setTimeout(enterFullscreen, 100);
-      });
-
-      // Cek koneksi secara berkala
-      setInterval(() => {
-        if (video.readyState === 4) { // HAVE_ENOUGH_DATA
-          status.textContent = "Streaming: " + new Date().toLocaleTimeString();
-        }
-      }, 5000);
+    function enterFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) elem.requestFullscreen();
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
     }
 
-    // Jalankan fungsi loadStream ketika dokumen siap
-    document.addEventListener('DOMContentLoaded', loadStream);
+    if (!streamUrl || !streamUrl.startsWith("http")) {
+      msg.innerHTML = "URL stream tidak ditemukan.<br>Gunakan format:<br><code>#http://link-stream</code>";
+    } else {
+      img.src = streamUrl;
+
+      img.onload = () => {
+        msg.style.display = "none";
+        img.style.display = "block";
+      };
+
+      img.onerror = () => {
+        msg.innerText = "CCTV sedang Offline atau tidak dapat diakses";
+        msg.style.display = "block";
+        img.style.display = "none";
+      };
+
+      window.addEventListener("load", () => {
+        setTimeout(enterFullscreen, 300);
+      });
+    }
   </script>
 </body>
 </html>
